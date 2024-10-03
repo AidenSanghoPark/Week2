@@ -31,4 +31,14 @@ public class ApplicationRepository {
         //  entityManager.persist(application);
         entityManager.merge(application); // merge 사용
     }
+
+    // 추가: 중복 신청 확인 메서드
+    public boolean existsByLecture_IdAndUser_Id(Long lectureId, Long userId) {
+        String jpql = "SELECT COUNT(a) FROM Application a WHERE a.lecture_Id = :lectureId AND a.user_Id = :userId";
+        Long count = entityManager.createQuery(jpql, Long.class)
+                .setParameter("lectureId", lectureId)
+                .setParameter("userId", userId)
+                .getSingleResult();
+        return count > 0;
+    }
 }

@@ -2,13 +2,17 @@ package com.Week2.domain.repository;
 
 import com.Week2.domain.model.Lecture;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.NoResultException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Logger;
 
+import jakarta.persistence.LockModeType;
 @Repository
 public class LectureRepository {
 
@@ -59,5 +63,20 @@ public class LectureRepository {
             entityManager.merge(lecture); // 업데이트 반영
         }
     }
+
+    @Transactional
+    public Optional<Lecture> findByIdWithLock(Long id) {
+        try {
+            String jpql = "SELECT l FROM Lecture l WHERE l.idx = :id";
+            Lecture lecture = entityManager.createQuery(jpql, Lecture.class)
+                    .setParameter("id", id)
+                    .setLockMode(LockModeType.PESSIMISTIC_WRITE)
+                    .getSingleResult();
+            return Optional.of(lecture);
+        } catch (Exception e) {
+            return Optional.empty();
+        }
+    }
+
 
 }
