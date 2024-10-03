@@ -6,10 +6,12 @@ import com.Week2.domain.repository.ApplicationRepository;
 import com.Week2.domain.repository.LectureRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class ApplicationService {
@@ -20,23 +22,29 @@ public class ApplicationService {
     @Autowired
     private LectureRepository lectureRepository;
 
+    @Transactional
     public void applyForLecture(Long lectureId, Long userId) {
 
-        Lecture lecture = lectureRepository.findById(lectureId)
-                .orElseThrow(() -> new IllegalArgumentException("Lecture not found"));
-
-        //현재 수강인원은 참여수용인원보다 작아야한다
-        if (lecture.getCurrent_Participants() < lecture.getMax_Participants()) {
-            Application application = new Application();
-            application.setLecture_Id(lectureId);
-            application.setUser_Id(userId);
-            application.setApplied_At(LocalDate.from(LocalDateTime.now()).atStartOfDay());
-
-            applicationRepository.save(application);
-            updateCurrentParticipants(lectureId);   //콜백 실행으로 강의테이블의 현재 인원도 업데이트
-        } else {
-            throw new IllegalArgumentException("Lecture is full");
+        if (lectureId == null || userId == null) {
+            throw new IllegalArgumentException("LectureId 또는 UserId 가 null 입니다");
         }
+
+        Lecture lecture = lectureRepository.findById(lectureId)
+                .orElseThrow(() -> new IllegalArgumentException("Lecture not found with id: " + lectureId));
+
+        if (lecture.getCurrent_Participants() >= lecture.getMax_Participants()) {
+            throw new IllegalArgumentException("Lecture is full. Current participants: " + lecture.getCurrent_Participants());
+        }
+
+        Application application = new Application();
+        application.setLecture_Id(lectureId);
+        application.setUser_Id(userId);
+        application.setApplied_At(LocalDate.now().atStartOfDay());
+
+        applicationRepository.save(application);
+
+        lecture.setCurrent_Participants(lecture.getCurrent_Participants() + 1);
+        lectureRepository.update(lecture);
     }
 
     // Application 저장 메서드 추가
