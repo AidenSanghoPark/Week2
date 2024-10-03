@@ -24,13 +24,12 @@ public class ApplicationService {
 
     @Transactional
     public void applyForLecture(Long lectureId, Long userId) {
-
-        if (lectureId == null || userId == null) {
-            throw new IllegalArgumentException("LectureId 또는 UserId 가 null 입니다");
-        }
-
-        Lecture lecture = lectureRepository.findById(lectureId)
+        Lecture lecture = lectureRepository.findByIdWithLock(lectureId)
                 .orElseThrow(() -> new IllegalArgumentException("Lecture not found with id: " + lectureId));
+
+        if (applicationRepository.existsByLecture_IdAndUser_Id(lectureId, userId)) {
+            throw new IllegalStateException("User has already applied for this lecture");
+        }
 
         if (lecture.getCurrent_Participants() >= lecture.getMax_Participants()) {
             throw new IllegalArgumentException("Lecture is full. Current participants: " + lecture.getCurrent_Participants());
@@ -44,8 +43,9 @@ public class ApplicationService {
         applicationRepository.save(application);
 
         lecture.setCurrent_Participants(lecture.getCurrent_Participants() + 1);
-        lectureRepository.update(lecture);
+        lectureRepository.save(lecture);
     }
+
 
     // Application 저장 메서드 추가
     // 같은 강의 같은 아이디 등록 안되게 로직 필요
